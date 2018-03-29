@@ -1,0 +1,341 @@
+<!-- -*- sgml -*- -->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.0//EN//">
+
+<HTML>
+<HEAD>
+<TITLE>Chris Hecker/Texture Mapping</TITLE>
+</HEAD>
+
+<!-- This uses a NerdsCrap extension, however it has --
+  -- low bandwidth requirements, and it is useful as --
+  -- a navigational aid/category indicator.          --> 
+<BODY bgcolor="#ffffff" background ="/dEngine/icons/t_qdev.gif">
+
+<H1>
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+Perspective Texture Mapping by Chris Hecker
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+</H1>
+
+
+
+<H2>Introduction</H2>
+
+<P>
+This page discusses copyrighted material published elsewhere,
+and used with permission. It is intended as an add-on and
+a pointer, not as a replacement. If you want to know what
+you are doing, you should get the articles and read them
+very closely. Be sure to have a look at
+<A HREF="http://ourworld.compuserve.com/homepages/checker/">
+Chris Hecker's home page</A> for current info.
+</P>
+
+
+<H3>The articles</H3>
+
+<P>
+In 1995, Chris Hecker started an article series on
+"Perspective Texture Mapping" in the
+<A HREF="http://www.gdmag.com/">Game Developer magazine</A>,
+published by
+<A HEEF="http://www.mfi.com/">Miller Freeman</A>. The series
+is finished by now. The articles in question
+as published in the "Under the Hood/Behind the Screen" column
+are:
+
+<UL>
+<LI>"Part I - Foundations", April/May 95, pp. 16-25
+<LI>"Part II - Rasterization", June/July 95, pp. 18-26
+<LI>"Part III - Endpoints and Mapping", August/September 95, pp. 17-24
+<LI>"Part IV - Approximations", December 95/January 96, pp. 19-25
+<LI>"Part V - It's About Time", April/May 96, pp. 25-33 
+</UL>
+
+I received the back issues for Part I-III. MFI will hopefully
+deliver soon the Part IV issue 
+on scanline subdivision, and Part V issue which contains the
+discussion of an example of a pipelined
+floating point texture mapper as invented by Michael Abrash.
+Another issue 
+I got lays the foundations to the floating point approach 
+<UL>
+<LI> "Let's Get to the (Floating) Point", February/March 96, pp. 19-24
+</UL>
+Back issues can be
+<A HREF="http://www.gdmag.com/torder.htm">ordered</A> from MFI.
+</P>
+
+<H3>The Source</H3>
+
+<P>
+The C++ sample sources are all available from the MFI
+<A HREF="ftp://ftp.mfi.com/pub/gamedev/src/">FTP site</A>.
+In the archives of the respective issues, you will find
+
+<UL>
+<LI>The april 1995 listing that
+    demonstrates how to write a high quality C++ implementation,
+    that is slow due to two multiplies and one division per pixel.
+<LI>The june 1995 listing that provides changes to above listing
+    for an integer rasterizer.
+<LI>The august 1995 listing that provides changes again to above
+    listings, for use of fractional endpoints.
+</UL>
+</P>
+
+<P>
+It is recommended to use the final version of the texture mapper 
+that has been released
+with the April/May 1996 issue, and available on the sites mentioned
+above. It includes the following files:
+<PRE>
+texture.h     ; Win32 app header file
+texture.cpp   ; Win32 app source
+texture.rc    ; Win32 resource script
+texture.ico   ; Win32 application icon
+makefile      ; Win32 VC++ nmake makefile
+files.txt     ; this file
+
+mappers.h     ; common texture mapping declarations
+divflfl.cpp   ; Apr/May '95 -- floating point edges and mapping, div/pix
+divifl.cpp    ; Jun/Jul '95 -- integer edge DDA, float mapping, div/pix
+divfxfl.cpp   ; Aug/Sep '95 -- fixedpoint edge, float mapping, div/pix
+subafxfl.cpp  ; Dec/Jan '95 -- fixedpt edge, float mapper, subdiv affine
+gradient.txt  ; comment for subafxfl.cpp rounding setup
+subafopt.cpp  ; Apr/May '96 -- subdividing affine assembly wrapper
+subaloop.asm  ; Apr/May '96 -- subdividing affine assembly inner loop
+
+dumb3d.hpp    ; cheesy vector library header
+dumb3d.cpp    ; cheesy vector library source
+</PRE>
+You will find the full archive at
+<A HREF="http://ourworld.compuserve.com/homepages/checker/">
+Chris Hecker's home page</A> or on the MFI
+<A HREF="ftp://ftp.mfi.com/pub/gamedev/src/">FTP site</A>.
+If everything fails, here is a 
+<A HREF="/dEngine/archive/gdev/texture.zip">local copy</A>
+I am maintaining with permission from Chris Hecker. Please
+do not redistribute this archive without asking him.
+</P>
+
+
+<H2>Overview of the articles</H2>
+
+<P>
+This article series is important and recommended for two reasons:
+Firstly, from what I have read so far, it is the best comprehensive
+discussion of perspective texture mapping to be found, including
+lots and lots of practical issues and an implementation. The theory 
+is surely covered best in sources like 
+<A HREF="http://www.cs.cmu.edu/afs/cs.cmu.edu/user/ph/www/heckbert.html">
+Paul Heckbert's Master Thesis</A>, or
+books like 
+<A HREF="#Wolberg">"Digital Image Warping" by George Wolberg</A>,
+but all
+you need for a very good start is here.
+Secondly, the parts I do not (yet) have available reportedly 
+discuss the ideas and the details of a P5-specific optimization
+of the fast inner loop that has been invented by Michael Abrash.
+Let's look at what goodies are available.
+</P>
+
+
+<H3>Part I: Foundations</H3>
+
+<P>
+Included are discussions of definitions and concepts, such as
+perspective projection, forward mapping, backward or inverse
+mapping, affine mapping and its drawbacks, linearity of 1/z
+in screen space, interpolation and triangle gradients,
+polygon fill conventions, sampling from pixel center and
+pre-stepping.
+</P>
+
+<H3>Part II: Rasterization</H3>
+
+<P>
+This article focuses on triangle rasterization, again with
+top-left fill convention, lighting all pixels strictly inside
+the polygon boundaries and pixels exactly on top or left
+edge boundaries. Instead of the straight floating point
+implementation used in the previous issue, this time an
+integer approach is discussed. Chris Hecker provides
+insights in the floor() and ceil() conversion functions, 
+forward differences, and a side remark in the annoying
+implementation dependance of the ANSI C mod operator.
+He discusses use of error-term DDA instead
+of fixed-point rasterization to scan the edges, with
+respect to jump predicition failures, taking into account
+the sampling from pixel center and the pre-stepping.
+</P>
+
+<H3>Part III: Endpoints and Mapping</H3>
+
+<P>
+In his previous article, Chris Hecker concluded mentioning
+another failure of many texture mappers, namely jerkiness due to
+using integer endpoints to compute the triangle gradients.
+To remove this visible jitter, he now takes a close looks
+at fractional endpoints and their advantages for mapping
+purposes, and their importance for subdivision approximations
+of perspective correct texture mapping. He selects a
+28.4 fixed point format for representing fractional
+endpoints, and develops in detail a fixed-point initialized
+error-term DDA to replace the integer intialized one.
+</P>
+
+<P>
+In addition, he describes a subtle bug in the
+computing the integer coordinates in the source texture
+(of the texel)  from the real texture coordinates for the center
+of a given screen pixel, and sets off to an in-depth
+discussion of truncating and rounding as involved in 
+defining a mapping rule from real source coordinates to
+integer source coordinates. This bug affects the sampling
+dependend on texture direction, i.e. rotation affects
+visual appearance.
+In the <A HREF="/dEngine/archive/gdev/texture.zip">archive</A>
+you will find the <code>gradient.txt</code> file discussing
+how to choose the appropriate rounding rule.
+</P>
+
+<H3>Part IV/V</H3>
+
+<P>
+I am hoping for MFI getting them delivered any time soon.
+</P>
+
+
+<H2>Quake's Texture Mapping</H2>
+
+<P>
+The floating point pipeling code for the texture mapping inner loop
+described in the articles exploits the fact that the P5 architecture
+allows for scheduling integer and floating operations in parallel,
+and effectively reduces computation to 4 cycles/pixel in best
+case.
+</P>
+
+<P>
+The article series does not mention Quake, and the details of the
+implementation id's rasterizer is acutally using might differ.
+In his CGDC talk, Michael Abrash stated that screen gradients for
+texture coordinates and 1/z are used to calculate perspective correct
+texture coordinates every 8 or 16 pixels, and linear interpolation is
+used between those points. He characterized the loop to be 
+100% floating-point down to the 8 or 16 pixel subdivisions, and
+mentions overlapping FDIV. In summary, their inner loop is clearly
+faster in floating-point on Pentium than it would be in fixed-point. 
+</P>
+
+<P>
+Btw., the z-fill that is done by the Quake rasterizer while
+processing world BSP polygons is not done within the same loop as
+the perspective texture mapping, because of the ever present lack
+of general purpose registers on the Intel x86 architecture, as
+pointed out to me by Chris Hecker and confirmed by John Carmack.
+</P>  
+
+<HR>
+
+<H2>References:</H2>
+
+<P>
+<UL>
+<LI>Michael Abrash<br>
+    "Zen of Graphics Programming", 2nd ed.,<br>
+     Coriolis Group, April 1996.<br><br> 
+<LI>Mark Feldman et. al.<br>
+    <A HREF="/dEngine/rsc/index.html#PCGPE">
+      "PC Game Programmer's Encyclopedia"</A>,<br>
+    FTP at 
+    <A HREF="ftp://x2ftp.oulu.fi/pub/msdos/programming/gpe/">
+     x2ftp.oulu.fi</A>.<br><br>
+<LI><A NAME="Wolberg">George Wolberg</A><br>
+    "Digital Image Warping",<br>
+    IEEE Computer Society Press, 1990, ISBN 0-8186-8944-7.<br><br>
+<LI>James D. Foley, Andries van Dam, Steven K. Feiner, John F. Hughes<br> 
+    "Computer Graphics - Principles and Practice",<br>
+    Addison-Wesley, 1990.<br><br>
+<LI>Ronald L. Graham, Oren Patashnik<br>
+    "Concrete Mathematics"<br>
+    Addison-Wesley, 1994.<br><br>
+</UL>
+Note: I add these references to the list -- b.
+<UL>
+<LI><A HREF="http://www.cs.mcgill.ca/~savs">Sergei Savchenko</A><br>
+      WWW on <A HREF="http://www.cs.mcgill.ca/~savs/3dgpl.html">
+         3DGPL home page</A>,
+      local copy <A HREF="/dEngine/rsc/index.html#3DGPL">here</A>.<br><br>
+
+<LI><A HREF="http://www.cs.cmu.edu/afs/cs.cmu.edu/user/ph/www/heckbert.html">
+    Paul Heckbert</A><br>
+    <A HREF="http://www.cs.cmu.edu/afs/cs.cmu.edu/user/ph/www/texfund.ps.Z">
+    "Fundamentals of Texture Mapping and Image Warping"
+    </A>,<br>
+     Master's Thesis, Berkeley 1989.<br><br>
+
+<LI><A HREF="ftp://explorer.dgp.toronto.edu/pub/lansd/">
+    Robert C. Lansdale</A><br>
+    <A HREF="ftp://explorer.dgp.toronto.edu/pub/lansd/lansd.ps.Z">
+    "Texture Mapping and  Resampling for Computer Graphics"</A><br>
+    PhD Thesis, Toronto, 1991.<br><br>
+</UL>
+</P>
+<HR> 
+
+<H3>Author:</H3> 
+
+<P>
+<A HREF="http://ourworld.compuserve.com/homepages/checker/">Chris Hecker</A>,
+articles published in the
+<A HREF="http://www.gdmag.com/">Game Developer magazine</A>,
+back issues available.
+</P> 
+ 
+<ADDRESS>
+<HR>
+<A HREF="/dEngine/"><img alt="home" src="/dEngine/icons/t_dE.gif"></A>
+<A HREF="/dEngine/r95/">
+ <img alt="qdev" src="/dEngine/icons/t_r95.gif"></A>
+<A HREF="/dEngine/r3D/">
+ <img alt="qdev" src="/dEngine/icons/t_r3D.gif"></A>
+<A HREF="/dEngine/dreadnot/">
+ <img alt="dread" src="/dEngine/icons/t_dreadnot.gif"></A>
+<A HREF="/dEngine/rsc/">
+ <img alt="rsc" src="/dEngine/icons/t_rsc.gif"></A>
+<A HREF="/dEngine/quake/">
+ <img alt="qdev" src="/dEngine/icons/t_qdev.gif"></A>
+<A HREF="/dEngine/doom/">
+ <img alt="doom" src="/dEngine/icons/t_doom.gif"></A>
+<A HREF="/dEngine/license/">
+ <img alt="license" src="/dEngine/icons/t_license.gif"></A>
+<A HREF="/dEngine/web/">
+ <img alt="web" src="/dEngine/icons/t_web.gif"></A>
+<br>
+<A HREF="/dEngine/">home</A>
+<A HREF="/dEngine/r95/">dEr95</A>
+<A HREF="/dEngine/r3D/">r3D</A>
+<A HREF="/dEngine/dreadnot/">dread</A>
+<A HREF="/dEngine/rsc/">netrsc</A>
+<A HREF="/dEngine/quake/">quake</A>
+<A HREF="/dEngine/doom/">doom</A>
+<A HREF="/dEngine/license/">legal</A>
+<A HREF="/dEngine/web/">web</A>
+<HR>
+Author:  <A HREF="/dEngine/author/">B.</A>,
+         email to
+         <A HREF="mailto:bernd.kreimeier@nero.uni-bonn.de">
+         bernd@nero.uni-bonn.de</A>,
+         with <A HREF="/dEngine/web/pgp">public PGP key</A><BR>
+<A HREF="/dEngine/license/copyright.html">Copyright (&#169)</A>
+    1995, 1996 by author. All rights reserved.<br>
+
+Source: $Id: checker_texmap.html,v 1.2 1996/06/24 00:02:32 b1 Exp $ 
+</ADDRESS><br><br>
+
+</BODY>
+</HTML>
+
+<!-- File: $Id: checker_texmap.html,v 1.2 1996/06/24 00:02:32 b1 Exp $ -->

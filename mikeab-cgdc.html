@@ -1,0 +1,542 @@
+<!-- -*- sgml -*- -->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.0//EN//">
+
+<HTML>
+<HEAD>
+<TITLE>CGDC Quake Talk</TITLE>
+</HEAD>
+
+<!-- This uses a NerdsCrap extension, however it has --
+  -- low bandwidth requirements, and it is useful as --
+  -- a navigational aid/category indicator.          --> 
+<BODY bgcolor="#ffffff" background ="/dEngine/icons/t_qdev.gif">
+
+<H1>
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+CGDC Quake Talk
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+</H1>
+
+
+<P>
+I took the
+<A HREF="ftp://ftp.idsoftware.com/mikeab/cgdctalk.doc">cgdctalk.doc</A>
+file as provided by Michael Abrash and converted it for distribution. The
+wording is his, HTML and possible related errors are mine. There is,
+with permission, a 
+<A HREF="/dEngine/archive/ddj/cgdctalk.zip">local copy</A>. Please
+remember that these are about 30 pages with a only few lines each, and
+that it is a WORD document.  -- b.
+</P>
+
+<P>
+<em>This document contains the transparencies for my talk at the Computer
+Game Developers Conference on 4/2/96.  Audio and video tapes of the
+talk are 
+<A HREF="http://www.webcom.com/knowit/cgdc/cgdc96.html">available</A>
+from the
+<A HREF="http://www.webcom.com/knowit/cgdc/">conference organizers</A>.<br>
+Note that the
+Quake technology described in these transparencies can be licensed
+from id Software; contact Jay Wilbur (jayw@idsoftware.com), or Mike
+Wilson (mikew@idsoftware.com).</em>  <br><br>
+
+--Michael Abrash
+</P>
+
+
+<HR>
+
+<H2>The Quake Graphics Engine</H2>
+
+<P>
+by Michael Abrash, id Software.
+</P>
+
+
+<P>
+<strong>WARNING! - Explicit technical content!!</strong><br><br>
+
+A highly technical look inside the design of the Quake 
+graphics engine.<br><br>
+
+1 hour != 12 months<br><br>
+
+Idea is to give you benefit of our real-world experience 
+to help you up the learning curve.
+</P>
+
+<HR>
+
+<P>
+<em>"Pretty soon, computers will be fast." -Billy Zelsnack </em><br><br>
+
+Hardware isn't as fast as we'd like for realtime 3-D, 
+and isn't going to be for a long time.<br><br>
+
+Hard frame-rate constraints.
+</P>
+
+<P>
+
+<UL>
+<LI>Fun thing #1: hardware is fast enough to do interesting things, 
+but not fast enough to do what we really want.<br><br>
+
+<LI>Fun thing #2: a ton of techniques and approaches, all of which 
+are good for something, none of which are good for everything.<br><br>
+
+</UL>
+
+Balancing act between visual quality and speed, all with the 
+frame rate limit as a hard constraint--and it all changes every 
+year as hardware moves forward.
+</P>
+
+<HR>
+
+<H3>Objectives:</H3>
+
+<P>
+
+<UL>
+<LI>Quake:
+    <UL>
+    <LI>True, arbitrary 6 DOF 3-D.
+    <LI>Highest possible graphics quality,
+        both lighting and rasterizing.
+    <LI>True 3-D for players, monsters, and
+        as many objects as possible.
+    </UL>
+<LI>Any 3-D engine:
+    <UL>
+    <LI>Correct color at each pixel.
+    <LI>Adequate, reasonably level framerate.
+    </UL>
+</UL>
+
+For our purposes, that means sampling the right pixel from the 
+polygon that's nearest at that pixel, and doing so 
+at 10-15 frame/second minimum.
+
+</P>
+
+<HR>
+
+<H4>Problems</H4>
+<P>
+It would be nice to be able to chuck all the polygons at a 
+rasterizer that was so fast that we didn't have to think any further.<br><br>
+
+Problem: no such rasterizer.<br><br>
+
+Bigger problem: level designers would just use more polygons.<br><br>
+
+The number of polygons goes up very fast with larger/more complex 
+worlds, much more than linearly, though the number of visible 
+polygons may not.<br><br>
+
+Problem of rejecting polygons outside the view pyramid, 
+and frame rate variation.<br><br>
+</P>
+
+<P>
+<UL>
+<LI>Principle #1:<br>
+    we need to reduce the polygon set quickly to only 
+    those that matter, or at least those that have a pretty good chance 
+    of mattering.<br><br>
+
+<LI>Principle #2:<br>
+    we need to get the right colors on the right pixels 
+    for those polygons we do draw; this means perspective correction, 
+    z-ordering, shading, subpixel and subtexel placement, and so on.
+</UL>
+
+#2 has been the focus for a long time, but #1 is quickly becoming the
+real challenge. Both must be done well in order to build a compelling
+engine.
+</P>
+
+<HR>
+
+
+<H3>Two parts to the Quake graphics engine:</H3>
+<P>
+
+<UL>
+<LI>Static world.
+<LI>Everything else (moving objects, including players, monsters, doors, 
+    platforms, health, ammo, armor, and so on).
+</UL>
+
+These are handled very differently.
+</P>
+
+<P>
+<H4>The static world.</H4>
+
+Big (up to around 10,000 large polygons), with a continuous polygon 
+mesh skin and any number of light sources.<br><br>
+
+Can be preprocessed very effectively.<br><br>
+
+Is compiled into a single BSP tree.
+</P>
+
+<HR>
+
+<H3>Handy facts about BSP trees:</H3>
+
+<UL>
+<LI>Nodes are splitting planes, with polygons stored on them, that 
+    carve up space.
+<LI>Leaves are the convex volumes that nodes carve the world into.
+<LI>A BSP tree can be walked front-to-back or back-to-front in linear 
+    time for any viewpoint.
+<LI>A BSP tree performs a convex, hierarchical partitioning of space, 
+    with each node defining a subspace that contains all of the node's 
+    children.
+<LI>Hierarchical partitioning helps greatly in large-scale culling.  
+    Node bounding boxes can be clipped to the view pyramid.
+<LI>If a node's bounding box is trivially rejected, all its children 
+    can be rejected with no further testing.
+<LI>If a node is trivially accepted, all its children can be accepted 
+    with no further testing.
+</UL>
+</P>
+
+<HR>
+
+
+<H4>The other part of large-scale culling:</H4>
+
+<P>
+  culling polygons that are 
+in the view pyramid but are totally obscured.  
+Some of the techniques that were considered and/or tried:
+
+<UL>
+<LI>Z-buffering
+<LI>Painters algorithm
+<LI>Beam tree
+<LI>Subdividing raycasting
+<LI>Edge or span sorting
+<LI>Portals
+<LI>Direct visibility extraction from BSP
+</UL>
+
+In every case, some average performance impact, considerable 
+worst-case impact, so frame rate wasn't very level.
+</P>
+
+<HR>
+
+<H3>Precalculate the PVS!</H3>
+
+Precalculated the PVS from each leaf to each leaf.
+
+<UL>
+<LI>Virtually free at runtime.
+<LI>Very expensive to precalculate - but that's what preprocessing 
+     is for.
+<LI>Speeds up culling to the view pyramid and determination of 
+    moving objects that have to be drawn, because only nodes and 
+    leaves in the PVS matter.
+</UL>
+</P>
+
+<HR>
+
+<H4>Frame rate</H4>
+
+<P>
+Frame rate was still not level enough, because of overdraw.<br><br>
+
+Added another stage, edge sorting, to process the polygons 
+in the PVS.<br><br>
+
+Add edges to global table, process all edges at once, top to 
+bottom, emit nearest spans.  Later, draw the spans for each surface 
+in turn.<br><br>
+
+Extra sorting work, but reduced overdraw to zero, levelling 
+performance a great deal.<br><br>
+
+Other benefits:
+
+<UL>
+<LI>Shared edges
+<LI>Concave polygons
+<LI>Culling of polygons for 3-D hw
+</UL>
+</P>
+
+<P>
+What key to sort on?
+
+<UL>
+<LI>BSP order.
+<LI>1/z.
+</UL>
+
+BSP order. BSPs contain more implicit information that you might think.
+</P>
+
+<HR>
+
+<H3>Rasterization!</H3>
+
+<P>
+Disadvantages of normal Gouraud shaded texture mapping:
+
+<UL>
+<LI>Rotational lighting variance if
+   triangles aren't used.
+
+<LI>Lighting detail is added by adding
+   more polygons.
+
+<LI>Lighting is not perspective correct.
+</UL>
+
+Solution: surface caching
+</P>
+
+<P>
+Each surface is generated from a combination of a tiled texture and a 
+light map with light values on a 16-pixel grid.<br><br>
+
+This is cached and used as the source texture for a non-shading 
+texture mapper.<br><br>
+
+The light map is precalculated with ray casting from lights to each 
+grid point on each surface.  Radiosity would be possible.<br><br>
+
+Per-surface mipmapping helps keep the total cache size down, and also 
+improves appearance at a distance.
+</P>
+
+<P>
+Advantages:
+
+<UL>
+<LI>No rotational variance.
+<LI>Perspective correct lighting.
+<LI>Fewer polgyons.
+<LI>Lighting separated from polygons.
+<LI>Ability to post-process.
+</UL>
+
+
+Disadvantages:
+
+<UL>
+<LI>More memory.
+<LI>More cache misses.
+<LI>Slow for constantly changing lighting
+   (fine for switching lighting on/off).
+<LI>Slowdown when turning corners.
+<LI>Not a perfect fit for hardware.
+</UL>
+<P>
+
+<HR>
+
+<P>
+<H3>Time to draw!</H3>
+
+There's a span drawer that takes the list of spans for a surface 
+and draws the pixels.<br><br>
+
+No lighting is performed.<br><br>
+
+The screen gradients for the texture coordinates and 1/z are used 
+to calculate perspective correct texture coordinates every 8 or 16 
+pixels, and linear interpolation is used between those points.<br><br>
+</P>
+
+
+<P>
+100% floating-point down to the 8 or 16 pixel subdivisions.<br><br>
+
+Hurts on 486, but Pentium floating-point is fast, and floating-point 
+solves all sorts of range and scale problems, and allows both 
+lowering FDIV precision and overlapping FDIV.  Also, using FP 
+registers frees up integer registers.<br><br>
+
+All in all, our inner loop is clearly faster in floating-point on 
+Pentium than it would be in fixed-point.
+</P>
+
+<HR>
+
+<H3>Everything else--moving entities.</H3>
+
+<P>
+There are several types of entities, stored as BSP trees, polygon 
+meshes, sprites, and particles.<br><br>
+
+Large-scale culling benefits for entities:  Each entity's bounding 
+box is clipped into the world BSP.<br><br>
+
+Only if it touches a PVS leaf is it flagged for later drawing, 
+after the world has been processed.<br><br>
+
+Separate BSP models, such as doors, platforms, and health and ammo 
+boxes, are clipped into the world BSP, then added to the global edge 
+table, just like world polygons.<br><br>
+
+Doors block view past them, reducing overdraw considerably.<br><br>
+
+BSP models in the same leaf fall back to sorting against each 
+other on 1/z.
+</P>
+
+
+<HR>
+
+
+<H4>More complex objects</H4>
+<P>
+
+More complex objects, such as torches, armor, and players can't be 
+done with BSPs.<br><br>
+
+Sprites look startlingly non-3D in a Quake level; they're rare now, 
+and may disappear entirely, but are an easy solution for objects 
+like torches.<br><br>
+</P>
+
+<P>
+We had been clipping sprites into the world BSP and drawing the 
+pieces by their leaves' BSP order, drawing back to front.<br><br>
+
+That approach didn't work so well for polygon models--players 
+and monsters.
+</P>
+
+<P>
+Polygon models are meshes of 100-400 polygons, with a single 
+front/back skin stretched over them.<br><br>
+
+We couldn't clip them to the world BSP, because it would be too 
+expensive, so we just drew each triangle in the nearest leaf it 
+had a vertex in, which caused occasional errors.<br><br>
+
+Errors sorting polygons within models.<br><br>
+
+Errors sorting between models in same leaf (and also with other 
+BSP models and sprites).<br><br>
+</P>
+
+<HR>
+
+
+<H4>Z-Buffer</H4>
+<P>
+
+Tried lots of tweaks (such as putting into edge list), but none was 
+satisfactory until John came up with a sweeping solution:<br><br>
+
+Uh... <strong>Z-buffering</strong><br><br>
+
+We z-buffer sprites, polygon models, and all other non-BSP entities.<br><br>
+
+How low-tech can you get?
+</P>
+
+<P>
+Solved all sorting problems for moving entities with NO sorting 
+errors ever.<br><br>
+
+Fits beautifully into overall design.<br><br>
+
+Because of no-overdraw spans, can z-fill world at an adequate speed.<br><br>
+
+Allows post-processing.  At the moment, we're doing particles, 
+scaled NxN colored rectangles, but could do pretty much anything.<br><br>
+
+Low-tech, high-tech, whatever; the secret's in the mixing and matching 
+until it all fits.
+<P>
+
+<HR>
+
+
+<H3>In conclusion:</H3>
+
+<P>
+The more 3-D tricks you know, and the more you experiment, the better.<br><br>
+
+Yes, I <strong>could</strong> use a vacation.<br><br>
+
+Sharing knowledge makes the world a better place.<br><br>
+</P>
+
+
+<P>
+<H3>Further reading:</H3>
+
+<UL>
+<LI><em>"Ramblings in Realtime",</em> Dr. Dobb's Sourcebook, 1995-1996.
+<LI><em>Zen of Graphics Programming,</em> 2nd ed., the Coriolis Group, April 1996.
+<LI><em>Computer Graphics,</em> Foley, van Dam, et al, Addison-Wesley.
+<LI><em>Procedural Elements for Computer Graphics,</em> David Rogers, McGraw Hill.
+</UL>
+</P>
+
+<HR> 
+
+<H3>Author:</H3> 
+
+Michael Abrash, CGDC talk of April 1996, published as video tape <A
+HREF="http://www.webcom.com/knowit/cgdc/cgdc96.html">CGDC96-158</A>.
+<br><br>
+
+ 
+<ADDRESS>
+<HR>
+<A HREF="/dEngine/"><img alt="home" src="/dEngine/icons/t_dE.gif"></A>
+<A HREF="/dEngine/r95/">
+ <img alt="qdev" src="/dEngine/icons/t_r95.gif"></A>
+<A HREF="/dEngine/r3D/">
+ <img alt="qdev" src="/dEngine/icons/t_r3D.gif"></A>
+<A HREF="/dEngine/dreadnot/">
+ <img alt="dread" src="/dEngine/icons/t_dreadnot.gif"></A>
+<A HREF="/dEngine/rsc/">
+ <img alt="rsc" src="/dEngine/icons/t_rsc.gif"></A>
+<A HREF="/dEngine/quake/">
+ <img alt="qdev" src="/dEngine/icons/t_qdev.gif"></A>
+<A HREF="/dEngine/doom/">
+ <img alt="doom" src="/dEngine/icons/t_doom.gif"></A>
+<A HREF="/dEngine/license/">
+ <img alt="license" src="/dEngine/icons/t_license.gif"></A>
+<A HREF="/dEngine/web/">
+ <img alt="web" src="/dEngine/icons/t_web.gif"></A>
+<br>
+<A HREF="/dEngine/">home</A>
+<A HREF="/dEngine/r95/">dEr95</A>
+<A HREF="/dEngine/r3D/">r3D</A>
+<A HREF="/dEngine/dreadnot/">dread</A>
+<A HREF="/dEngine/rsc/">netrsc</A>
+<A HREF="/dEngine/quake/">quake</A>
+<A HREF="/dEngine/doom/">doom</A>
+<A HREF="/dEngine/license/">legal</A>
+<A HREF="/dEngine/web/">web</A>
+<HR>
+Author:  <A HREF="/dEngine/author/">B.</A>,
+         email to
+         <A HREF="mailto:bernd.kreimeier@nero.uni-bonn.de">
+         bernd@nero.uni-bonn.de</A>,
+         with <A HREF="/dEngine/web/pgp">public PGP key</A><BR>
+<A HREF="/dEngine/license/copyright.html">Copyright (&#169)</A>
+    1995, 1996 by author. All rights reserved.<br>
+
+Source: $Id: mikeab-cgdc.html,v 1.2 1996/06/08 20:30:51 b1 Exp $ 
+</ADDRESS><br><br>
+
+</BODY>
+</HTML>
+
+<!-- File: $Id: mikeab-cgdc.html,v 1.2 1996/06/08 20:30:51 b1 Exp $ -->

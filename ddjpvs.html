@@ -1,0 +1,190 @@
+<!-- -*- sgml -*- -->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.0//EN//">
+
+<HTML>
+<HEAD>
+<TITLE>Inside Quake: Visible Surface Determination</TITLE>
+</HEAD>
+
+<!-- This uses a NerdsCrap extension, however it has --
+  -- low bandwidth requirements, and it is useful as --
+  -- a navigational aid/category indicator.          --> 
+<BODY bgcolor="#ffffff" background ="/dEngine/icons/t_qdev.gif">
+
+
+<H1>
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+Inside Quake: Visible Surface Determination
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+</H1>
+
+<P>
+An
+<A HREF="/dEngine/quake/archive/a_march96/">e-mail</A>
+by Derek Nickel mentioned the follwing article:
+
+<PRE>
+   Michael Abrash, "Inside Quake: Visible-Surface Determination"
+   In: Dr. Dobb's Sourcebook, January/February 1996, #255
+       Ramblings In Real Time, pp. 41-45
+</PRE>
+
+This article talks about pushing past the unconscious limits that are often
+set in a project. It then goes on to describe the various techniques that
+John Carmack tried out while developing his visible-surface determination
+and culling algorithms (VSD) in Quake. This includes a description of the 
+potentially visible set (PVS) , a.k.a. visibility lists, on page 45.
+
+<H2>BSP-based culling</H2>
+
+<P>
+Michael Abrash points out that, with the limited tasks of rasterization
+like perspective correct texture mapping being moved into hardware,
+VSD will prove to be the biggest challenge for coders. Spatial
+subdivision is one approach, and he mentions the representation of
+Quake levels as 3D BSP, and points out that this BSP, unlike the one
+he discussed in previous columns in 1995, does not store polygons in
+tree nodes, but in the leafs (which, if I understand correctly, is
+not different from the 2D BSP DOOM used).
+</P>
+
+<P>
+He then explains the culling of polygons completely outside the
+view frustrum, and points out the advantages of culling entire
+BSP subtress, which requires maintaning bounding boxes or spheres
+with each node. This, again, is a technique used with DOOM already.
+</P>
+
+
+<H2>Overdraw</H2>
+
+<P>
+The problem of overdraw is most obvious with back-to-front BSP
+traversal an painter algorithm. Your world is not rendered in
+a scalable way, and performance will not only be slow, but worse,
+it will not be level. He mentions that, with a 10000 polygon
+Quake level, a wortst-case overdraw of ten times or more was not
+rare.
+</P>
+
+<P>
+To solve this problem, and to reduce overdraw to a manageable
+and, more important, level magnitude, John Carmack tried a
+multitude of approaches:
+<UL>
+<LI>Beam tree (view frstrum subdivision by hierarchy of clipping planes)
+<LI>Subdividing raycast (8x8 pixel grids)
+<LI>Vertex-free surfaces (infinite plane representations)
+<LI>Draw buffer (a 1-bit "already drawn" flag buffer)
+<LI>Span-based drawing (see <A HREF="ddjzsort.html">later article</A>)
+<LI>Portals(see Seth Teller's PhD, reference below)
+</UL>
+</P>
+
+<H2>Potentially Visible Sets</H2>
+
+<P>
+The final solution found by John Carmack was a precalculated
+lookup, providing for each leaf of the BSP a list of
+potentially visible leafs (the PVS). This again requires
+the world to be static, and it does not take the direction
+of view into account (a common misconception with BSP trees
+as well). A raw PVS is quite large (Abrash mentions several
+megabyte), but RLE compression and modifications to the
+BSP builder brought the size down to 20K. The modifications
+he names are:
+<UL>
+<LI>changing the split choosing heuristic
+<LI>sealing the map
+</UL>
+Here sealing means calculating some hull of the world to
+determine surfaces that are not visible from anywhere
+within the world, and removing them. The idea of Quake-style
+rendering is being inside a densely occulded world, and
+a sealing process makes perfect sense. It is related
+to the Brush based CSG modeling used by QuakeEd
+(see
+<A HREF="/dEngine/quake/">references on MAP editing</A>
+for details). Seth Teller mentions a preprocessing
+step to identify small gaps and other leakage by polygons
+that are not perfectly adjacent, map faults that increase
+PVS size immensely.
+</P>
+<P>
+The BSP heuristic should be changed to generate fewer leaves,
+prefering the polygons that splits the fewest other
+polygons. This will generate less balanced trees, which is
+not a severe disdavantage in this case, if I remember correctly.
+</P>   
+
+
+ 
+<H3>References</H3>
+
+I identified the SIGGRAPH paper using the valuable
+<A HREF="http://www.siggraph.org/publications/bibliography/bibliography.html">
+ACM SIGGRAPH Online Bibliography Database</A>. The paper is not
+available on the web, but Seth Teller provided the dissertation as
+three parts, and several other recent papers.
+
+<UL>
+<LI>James D. Foley, Andries van Dam, Steven K. Feiner, John F. Hughes<br> 
+    "Computer Graphics - Principles and Practice",<br>
+    Addison-Wesley, 1990<br><br>
+<LI>
+    <A HREF="http://graphics.lcs.mit.edu/~seth/">Seth Teller</A>,<br>
+    <A HREF="http://graphics.lcs.mit.edu/~seth/pubs/pubs.html">
+    "Visibility Computations in Densely Occluded Polyhedral Environments"
+    </A><br> 
+    Dissertation, 1992<br><br>
+<LI><A HREF="http://graphics.lcs.mit.edu/~seth/">Seth Teller</A>,<br>
+    "Visibility Preprocessing for Interactive Walkthroughs",<br>
+    Computer Graphics (SIGGRAPH '91 Proceedings), 25, pp. 61-69, July 1991.
+    <br><br>
+</UL>
+
+
+
+<ADDRESS>
+<HR>
+<A HREF="/dEngine/"><img alt="home" src="/dEngine/icons/t_dE.gif"></A>
+<A HREF="/dEngine/r95/">
+ <img alt="qdev" src="/dEngine/icons/t_r95.gif"></A>
+<A HREF="/dEngine/r3D/">
+ <img alt="qdev" src="/dEngine/icons/t_r3D.gif"></A>
+<A HREF="/dEngine/dreadnot/">
+ <img alt="dread" src="/dEngine/icons/t_dreadnot.gif"></A>
+<A HREF="/dEngine/rsc/">
+ <img alt="rsc" src="/dEngine/icons/t_rsc.gif"></A>
+<A HREF="/dEngine/quake/">
+ <img alt="qdev" src="/dEngine/icons/t_qdev.gif"></A>
+<A HREF="/dEngine/doom/">
+ <img alt="doom" src="/dEngine/icons/t_doom.gif"></A>
+<A HREF="/dEngine/license/">
+ <img alt="license" src="/dEngine/icons/t_license.gif"></A>
+<A HREF="/dEngine/web/">
+ <img alt="web" src="/dEngine/icons/t_web.gif"></A>
+<br>
+<A HREF="/dEngine/">home</A>
+<A HREF="/dEngine/r95/">dEr95</A>
+<A HREF="/dEngine/r3D/">r3D</A>
+<A HREF="/dEngine/dreadnot/">dread</A>
+<A HREF="/dEngine/rsc/">netrsc</A>
+<A HREF="/dEngine/quake/">quake</A>
+<A HREF="/dEngine/doom/">doom</A>
+<A HREF="/dEngine/license/">legal</A>
+<A HREF="/dEngine/web/">web</A>
+<HR>
+Author:  <A HREF="/dEngine/author/">B.</A>,
+         email to
+         <A HREF="mailto:bernd.kreimeier@nero.uni-bonn.de">
+         bernd@nero.uni-bonn.de</A>,
+         with <A HREF="/dEngine/web/pgp">public PGP key</A><BR>
+<A HREF="/dEngine/license/copyright.html">Copyright (&#169)</A>
+    1995, 1996 by author. All rights reserved.<br>
+Source: $Id: ddjpvs.html,v 1.2 1996/06/08 20:30:51 b1 Exp $ </ADDRESS><br><br>
+
+</BODY>
+</HTML>
+
+<!-- File: $Id: ddjpvs.html,v 1.2 1996/06/08 20:30:51 b1 Exp $ -->

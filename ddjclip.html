@@ -1,0 +1,147 @@
+<!-- -*- sgml -*- -->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.0//EN//">
+
+<HTML>
+<HEAD>
+<TITLE>Quake 3D Clipping</TITLE>
+</HEAD>
+
+<!-- This uses a NerdsCrap extension, however it has --
+  -- low bandwidth requirements, and it is useful as --
+  -- a navigational aid/category indicator.          --> 
+<BODY bgcolor="#ffffff" background ="/dEngine/icons/t_qdev.gif">
+
+
+<H1>
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+Quake 3D Clipping
+<A HREF="/dEngine/quake/"><img src="/dEngine/icons/i_qdev.gif"></A>
+</H1>
+
+<P>
+Derek Nickel provided the following reference to another article
+published in the 
+<A HREF="http://www.ddj.com/">Dr. Dobbs</A> Sourcebook:
+
+<PRE>
+   Michael Abrash, "3-D Clipping and Other Thoughts"
+   In: Dr. Dobb's Sourcebook, March/April 1996, #256
+       Ramblings In Real Time, pp. 43-50
+</PRE>
+
+In this article Michael Abrash discusses 3D clipping basics, i.e. the
+intersection of an edge with a plane, in the context of clipping polygons
+against the view frustrum. However, the algorithms are useful for any
+sort of 3D clipping task. The article explains why planes are stored
+as normals and offset to origin (see
+<A HREF="/dEngine/quake/archive/a_march96/">e-mail discussion</A>),
+how new vertices and edges could be generated, that texture space clipping
+is simply done the same way as the 3D coordinates are clipped, and finally
+discusses the repspective advantages of viewspace and worldspace clipping.
+On the pages 47 and 50 you will find the listing of an example. The
+<A HREF="ftp://ftp.idsoftware.com/mikeab/ddjclip.zip">source</A>
+is available, and there is a
+<A HREF="/dEngine/archive/ddj/ddjclip.zip">local copy</A>
+with permission.
+</P>
+
+<P>
+Quoting the 
+<A HREF="ddjclip/readme.txt">README.TXT</A>:<br><br>
+
+"This 
+<A HREF="/dEngine/archive/ddj//ddjclip.zip">archive</A>
+contains the source code 
+(<A HREF="ddjclip/clip.h">clip.h</A>,
+<A HREF="ddjclip/clip.c">clip.c</A>, and
+<A HREF="ddjclip/resource.h">resource.h</A>)
+for a sample system to render
+3-D scenes to illustrate 3-D clipping, as discussed in my "Ramblings
+in Realtime" column in the March/April 1995 issue of _Dr. Dobb's
+Sourcebook_.  The archive contains the source code for CLIP, a C
+program that contains a small 3-D graphics engine to demonstrate 3-D
+clipping.  Both programs are Win32 programs, tested with VC++ 2.0
+running on Windows NT 3.5.<br><br>
+
+To make the VC++ projects for this program, just unzip this archive
+into the desired directory using the -d switch to pkunzip; it will
+create a windebug subdirectory.  Have VC++ build a project from the
+files in the directory.  Besides the source code, the Win32
+executable clip.exe is provided in the WinDebug subdirectory.  Key
+commands to clip.exe are as follows:
+
+<PRE>
+  left and right arrows: turn left and right
+  up and down arrows: go forward and backward
+  A and D: look up and down
+  N and M: roll left and right
+  D and C: move up and down
+</PRE>
+
+Thanks to Chris Hecker, John Carmack, and Eric Kutter for their help.<br><br>
+
+Enjoy!<br><br>
+
+Michael Abrash, 
+mikeab@idsoftware.com,
+12/25/95"
+</P>
+
+<H3>References</H3>
+
+<P>
+<UL>
+<LI>James D. Foley, Andries van Dam, Steven K. Feiner, John F. Hughes<br> 
+    "Computer Graphics - Principles and Practice",<br>
+    Addison-Wesley, 1990<br><br>
+<LI>David Rogers<br>
+    "Procedural Elements of Computer Graphics"<br>
+    McGraw-Hill, 1985<br><br>
+</UL>
+</P>
+ 
+
+
+<ADDRESS>
+<HR>
+<A HREF="/dEngine/"><img alt="home" src="/dEngine/icons/t_dE.gif"></A>
+<A HREF="/dEngine/r95/">
+ <img alt="qdev" src="/dEngine/icons/t_r95.gif"></A>
+<A HREF="/dEngine/r3D/">
+ <img alt="qdev" src="/dEngine/icons/t_r3D.gif"></A>
+<A HREF="/dEngine/dreadnot/">
+ <img alt="dread" src="/dEngine/icons/t_dreadnot.gif"></A>
+<A HREF="/dEngine/rsc/">
+ <img alt="rsc" src="/dEngine/icons/t_rsc.gif"></A>
+<A HREF="/dEngine/quake/">
+ <img alt="qdev" src="/dEngine/icons/t_qdev.gif"></A>
+<A HREF="/dEngine/doom/">
+ <img alt="doom" src="/dEngine/icons/t_doom.gif"></A>
+<A HREF="/dEngine/license/">
+ <img alt="license" src="/dEngine/icons/t_license.gif"></A>
+<A HREF="/dEngine/web/">
+ <img alt="web" src="/dEngine/icons/t_web.gif"></A>
+<br>
+<A HREF="/dEngine/">home</A>
+<A HREF="/dEngine/r95/">dEr95</A>
+<A HREF="/dEngine/r3D/">r3D</A>
+<A HREF="/dEngine/dreadnot/">dread</A>
+<A HREF="/dEngine/rsc/">netrsc</A>
+<A HREF="/dEngine/quake/">quake</A>
+<A HREF="/dEngine/doom/">doom</A>
+<A HREF="/dEngine/license/">legal</A>
+<A HREF="/dEngine/web/">web</A>
+<HR>
+Author:  <A HREF="/dEngine/author/">B.</A>,
+         email to
+         <A HREF="mailto:bernd.kreimeier@nero.uni-bonn.de">
+         bernd@nero.uni-bonn.de</A>,
+         with <A HREF="/dEngine/web/pgp">public PGP key</A><BR>
+<A HREF="/dEngine/license/copyright.html">Copyright (&#169)</A>
+    1995, 1996 by author. All rights reserved.<br>
+Source: $Id: ddjclip.html,v 1.4 1996/06/16 23:57:21 b1 Exp $ </ADDRESS><br><br>
+
+</BODY>
+</HTML>
+
+<!-- File: $Id: ddjclip.html,v 1.4 1996/06/16 23:57:21 b1 Exp $ -->
